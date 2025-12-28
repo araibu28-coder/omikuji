@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新春ぁらぃぶみくじ</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Yomogi&display=swap" rel="stylesheet">
+
+<style>
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #A7381D;   /* ← 背景変更 */
+  overflow: hidden;
+  font-family: 'Yomogi', cursive;
+  color: #fff;
+}
+
+/* ===== 金花 ===== */
+.kinka {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
+  animation: spin linear infinite;
+}
+
+@keyframes spin {
+  to { rotate: 360deg; }
+}
+
+/* ===== アプリ ===== */
+.app {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 375px;
+  height: 100%;
+  margin: 0 auto;
+}
+
+/* ===== 画面共通 ===== */
+.screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hidden { display: none; }
+
+h1 {
+  font-size: 26px;
+  margin-bottom: 10px;
+  white-space: pre-line;   /* ← 改行を有効化 */
+}
+
+input {
+  width: 80%;
+  padding: 12px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+}
+
+/* ===== ボタン ===== */
+button {
+  padding: 12px 22px;
+  font-size: 17px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ===== 名前画面 ===== */
+.start-area {
+  position: relative;
+  width: 100%;
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.mini {
+  position: absolute;
+  left: 10px;
+  width: 72px;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* おみくじ選択画面 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, auto); /* 上段2枚 下段2枚 */
+  gap: 10px;
+  width: 90%;
+  max-width: 320px;
+  justify-items: center;
+}
+
+.grid img {
+  width: 100%;
+  max-height: 26vh;
+  object-fit: contain;
+  cursor: pointer;
+  transform-origin: top center;
+  animation: sway 2.5s ease-in-out infinite;
+}
+
+.grid img:nth-child(odd) { animation-delay: 0.3s; }
+
+@keyframes sway {
+  0%,100% { transform: rotate(0deg); }
+  50% { transform: rotate(3deg); }
+}
+
+
+/* ===== 結果 ===== */
+.result-img {
+  max-width: 90%;
+  max-height: 40vh;
+  object-fit: contain;
+  margin: 15px 0;
+}
+
+.result-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.result-buttons button {
+  font-size: 15px;
+  padding: 10px 18px;
+}
+
+.share-btn {
+  background: #fff;
+  color: #A7381D;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<audio id="bgm" src="新年の風.mp3" loop></audio>
+
+<div class="app">
+
+<!-- 名前入力 -->
+<div id="screen-name" class="screen">
+  <h1>新春ぁらぃぶみくじ</h1>
+  <p>お名前を入力してね</p>
+  <input id="username" placeholder="なまえ">
+
+  <div class="start-area">
+    <img src="ぁらぃぶさんミニ.PNG" class="mini">
+    <button onclick="goToSelect()">おみくじを選ぶ</button>
+  </div>
+</div>
+
+<!-- 選択 -->
+<div id="screen-select" class="screen hidden">
+  <h1>おみくじを選んでね！</h1>
+  <div class="grid">
+    <img src="omikuji-sentaku.PNG" onclick="drawOmikuji()">
+    <img src="omikuji-sentaku.PNG" onclick="drawOmikuji()">
+    <img src="omikuji-sentaku.PNG" onclick="drawOmikuji()">
+    <img src="omikuji-sentaku.PNG" onclick="drawOmikuji()">
+  </div>
+</div>
+
+<!-- 結果 -->
+<div id="screen-result" class="screen hidden">
+  <h1 id="result-title"></h1>
+  <img id="result-img" class="result-img">
+
+  <div class="result-buttons">
+    <button class="share-btn" onclick="shareResult()">結果をシェア</button>
+    <button onclick="saveImage()">結果を保存する</button>
+    <button onclick="location.reload()">もう一回ひく</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+let userName = "";
+let resultText = "";
+const bgm = document.getElementById("bgm");
+
+/* BGM */
+function playBGM() {
+  if (bgm.paused) bgm.play();
+}
+
+/* 画面遷移 */
+function goToSelect() {
+  playBGM();
+  const name = document.getElementById("username").value;
+  if (!name) return alert("名前を入力してね！");
+  userName = name;
+  toggle("screen-name", false);
+  toggle("screen-select", true);
+}
+
+function drawOmikuji() {
+  const r = Math.random() * 100;
+  let result;
+
+  if (r < 10) result = ["大吉", "daikichi.PNG"];
+  else if (r < 40) result = ["中吉", "chuukichi.PNG"];
+  else if (r < 75) result = ["吉", "kichi.PNG"];
+  else if (r < 95) result = ["末吉", "suekitchi.PNG"];
+  else result = ["凶", "kyou.PNG"];
+
+  resultText = `${userName} さんの結果は「${result[0]}」！`;
+
+  toggle("screen-select", false);
+  toggle("screen-result", true);
+
+  document.getElementById("result-title").textContent =
+    `${userName} さんの結果は...\n${result[0]}！`;
+
+  document.getElementById("result-img").src = result[1];
+}
+
+/* 保存 */
+function saveImage() {
+  const img = document.getElementById("result-img");
+  const a = document.createElement("a");
+  a.href = img.src;
+  a.download = "omikuji_result.png";
+  a.click();
+}
+
+function toggle(id, show) {
+  document.getElementById(id).classList.toggle("hidden", !show);
+}
+
+/* SNS共有 */
+function shareResult() {
+  const text = `新春ぁらぃぶみくじ\n${resultText}`;
+  if (navigator.share) {
+    navigator.share({ text });
+  } else {
+    navigator.clipboard.writeText(text);
+    alert("結果をコピーしました！");
+  }
+}
+
+/* 金花50個 */
+for (let i = 0; i < 50; i++) {
+  const k = document.createElement("img");
+  k.src = "金花.PNG";
+  k.className = "kinka";
+
+  const sizes = [24, 40, 60];
+  k.style.width = sizes[Math.floor(Math.random() * 3)] + "px";
+  k.style.left = Math.random() * 100 + "%";
+  k.style.top = Math.random() * 100 + "%";
+  k.style.animationDuration = (8 + Math.random() * 12) + "s";
+
+  document.body.appendChild(k);
+}
+</script>
+
+</body>
+</html>
